@@ -1,0 +1,16 @@
+{
+  "name": "backup-wrapper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  },
+  "author": "Sebastian Hönel <development@hoenel.net>",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^5.0.0",
+    "recursive-copy": "^2.0.9",
+    "sh.log-client": "^1.0.3",
+    "wakeonlan": "^0.1.0"
+  }
+}

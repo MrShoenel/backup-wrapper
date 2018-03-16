@@ -1,0 +1,52 @@
+/**
+ * @typedef HistoryObj
+ * @type {object}
+ * @property {number} lastRun the timestamp (in seconds) when the entry was last successfully run
+ * @property {number} lastDuration the time (in seconds) the backup took the last time
+ */
+
+/**
+ * @typedef BackupTask
+ * @type {object}
+ * @property {boolean} allowFail - whether it is ok if this task fails or not
+ * @property {string} exec - program to run
+ * @property {Array.<string>} args - arguments
+ */
+
+/**
+ * @typedef InternalBackupTask
+ * @type {'@emptyDest'|Function} If a function, then one function's result will be passed to the next function. A function should synchronously return a value or a Promise.<any>. If the latter, the promise is awaited and its resulting value is used. The whole job fails if any of the functions fails or their promise rejects.
+ */
+
+/**
+ * @typedef BackupOptions
+ * @type {object}
+ * @property {string} name - the name of the backup job
+ * @property {boolean} enabled - whether or not this job is enabled
+ * @property {'zip'|'copy'|'tasksOnly'} mode - how this backup works (copy, zip or only custom tasks defined via tasksBefore or/and tasksAfter)
+ * @property {string} src - absolute path to file or folder to backup
+ * @property {string} dest - absolute path to folder to store backup in
+ * @property {number} intervalMinutes - amount of minutes in between backups
+ * @property {number} intervalErrorMinutes - amount of minutes to wait if a backup failed before attempting it again
+ * @property {Array.<string>} sevenZipArgs arguments to pass to 7z
+ * @property {Array.<BackupTask|InternalBackupTask>} tasksBefore list of tasks to run before backup; built-in tasks start with @, like @emptyDest will wipe the destination folder
+ * @property {Array.<BackupTask|InternalBackupTask>} tasksAfter list of tasks to run after backup
+ */
+
+
+/**
+ * @typedef AppConfig
+ * @property {number} parallelJobs
+ * @property {string} sevenZip
+ * @property {LogConfig} logging
+ * 
+ * @typedef Config
+ * @property {AppConfig} app
+ * @property {Array.<BackupOptions>} backups
+ * 
+ * @typedef LogConfig
+ * @type {object}
+ * @property {string} method
+ * @property {string} endpoint
+ * @property {number} level
+ */
