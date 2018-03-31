@@ -33,71 +33,62 @@ class Backup {
   };
 
   /**
-   * 
    * @param {BackupTask|InternalBackupTask} task
    * @param {any} prevResult the result (if any) from the task that run previously. This is only passed to InternalBackupTasks that are of kind function.
    * @returns {Promise.<any>}
    */
-  _mapInternalTask(task, prevResult) {
+  async _mapInternalTask(task, prevResult) {
     if (task === '@emptyDest') {
-      return fsX.emptyDir(this.options.dest);
+      return await fsX.emptyDir(this.options.dest);
     } else if (task instanceof Function) {
-      return new Promise((resolve, reject) => {
-        try {
-          const result = task(prevResult);
-          if (result instanceof Promise) {
-            result.then(resolve).catch(reject);
-          } else {
-            resolve(result);
-          }
-        } catch (e) {
-          reject(e);
-        }
-      });
+      const args = prevResult === void 0 ? [] : [prevResult];
+      const result = task.apply(null, args);
+
+      if (result instanceof Promise) {
+        return await result;
+      } else {
+        return result;
+      }
     } else if (Array.isArray(task)) {
-      return Backup.runProcess(task.exec, task.args);
+      return await Backup.runProcess(task.exec, task.args);
     }
-    
+
     throw new Error(`The task "${JSON.stringify(task)}" is not supported.`);
   };
 
-  _runTasksBefore() {
-    return this._runTasks(this.options.tasksBefore);
+  async _runTasksBefore() {
+    return await this._runTasks(this.options.tasksBefore);
   };
 
-  _runTasksAfter() {
-    return this._runTasks(this.options.tasksAfter);
+  async _runTasksAfter() {
+    return await this._runTasks(this.options.tasksAfter);
   };
 
   /**
    * @param {Array.<BackupTask>} tasks
    * @returns {Promise.<void>}
    */
-  _runTasks(tasks) {
+  async _runTasks(tasks) {
     const tasksToRun = (tasks || []).slice(0);
 
-    return new Promise((resolve, reject) => {
-      const runFirstTask = (prevResult = void 0) => {
-        if (tasksToRun.length === 0) {
-          resolve();
-          return;
-        }
-        
-        this._mapInternalTask(tasksToRun.shift(), prevResult).then(result => {
-          runFirstTask(result);
-        }).catch(err => {
-          if (task.allowFail) {
-            resolve();
-          } else {
-            reject(err);
-          }
-        });
-      };
+    let previousResult = void 0;
 
-      runFirstTask();
-    });
+    for (let task of tasksToRun) {
+      try {
+        previousResult = await this._mapInternalTask(task, previousResult);
+      } catch (e) {
+        if (!task.allowFail) {
+          throw e;
+        }
+      }
+    }
   };
 
+  /**
+   * Evaluates whether the backup should be skipped at this point in time.
+   * 
+   * @returns {Promise.<boolean>}
+   */
   async _runSkipper() {
     if (typeof this.options.skipBackup === 'function') {
       const value = this.options.skipBackup();
@@ -113,11 +104,12 @@ class Backup {
         return skipValue;
       }
 
-      throw new Error(`The evaluation for 'skipValue' or its promise did not return a boolean value.`);
-    } else {
-      // Not used; do not skip the backup -> return false
-      return false;
+      throw new Error(
+        `The evaluation for 'skipValue' or its promise did not return a boolean value.`);
     }
+
+    // Not used; do not skip the backup -> return false
+    return false;
   };
 
   /**
@@ -156,44 +148,40 @@ class Backup {
   };
 
   /**
+   * Runs the whole backup process. It evaluates whether the backup shall be skipped.
+   * Then the tasksBefore are run, then the actual backup, then the tasksAfter.
    * 
    * @returns {Promise.<void>}
    */
-  run() {
-    return this._runSkipper().then(shallSkip => {
-      if (shallSkip) {
-        return Promise.resolve();
-      }
+  async run() {
+    if (await this._runSkipper()) {
+      return; // Skip it.
+    }
 
-      return this._runTasksBefore().then(_ => {
-        let backupPromise = null;
+    await this._runTasksBefore();
   
-        if (this.options.mode === 'zip') {
-          backupPromise = Backup.runProcess(this.sevenZip, ['a'].concat(this.options.sevenZipArgs.concat([
-            this.destinationFileName, this.options.src]))).catch(err => {
-              fs.exists(this.destinationFileName, exists => {
-                fs.unlink(this.destinationFileName, _ => { });
-              });
-              throw err;
-            });
-        } else if (this.options.mode === 'copy') {
-          backupPromise = copy(this.options.src, this.destinationFileName, {
-            overwrite: true,
-            expand: true,
-            dot: true,
-            junk: true
+    if (this.options.mode === 'zip') {
+      await Backup.runProcess(this.sevenZip, ['a'].concat(this.options.sevenZipArgs.concat([
+        this.destinationFileName, this.options.src]))).catch(err => {
+          fs.exists(this.destinationFileName, exists => {
+            fs.unlink(this.destinationFileName, _ => { });
           });
-        } else if (this.options.mode === 'tasksOnly') {
-          backupPromise = Promise.resolve();
-        } else {
-          backupPromise = Promise.reject(`The mode "${this.options.mode}" is not supported.`);
-        }
-        
-        return backupPromise.then(_ => {
-          return this._runTasksAfter();
+          throw err;
         });
+    } else if (this.options.mode === 'copy') {
+      await copy(this.options.src, this.destinationFileName, {
+        overwrite: true,
+        expand: true,
+        dot: true,
+        junk: true
       });
-    });
+    } else if (this.options.mode === 'tasksOnly') {
+      // Do nothing, but let's keep this block.
+    } else {
+      await Promise.reject(`The mode "${this.options.mode}" is not supported.`);
+    }
+
+    await this._runTasksAfter();
   };
 };
 
