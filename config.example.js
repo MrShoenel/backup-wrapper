@@ -52,6 +52,10 @@ const createConf = () => {
         intervalMinutes: 60 * 24 * 3,
         intervalErrorMinutes: 5,
         sevenZipArgs: ["-t7z", `-w${os.tmpdir()}`, "-stl", "-m0=lzma2", "-mx=9", "-md=32m", "-mhe=on", `-p${fs.readFileSync('D:\\backup\\btsync-password.txt').toString('utf-8').trim()}`],
+        skipBackup: () => new Promise((resolve, reject) => {
+          // Check if the backup is really required (e.g. compare timestamps or something)
+          setTimeout(() => resolve(Math.random() < .5), 1000);
+        })
       },
 
       /*

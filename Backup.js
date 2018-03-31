@@ -98,6 +98,28 @@ class Backup {
     });
   };
 
+  async _runSkipper() {
+    if (typeof this.options.skipBackup === 'function') {
+      const value = this.options.skipBackup();
+      let skipValue = false;
+
+      if (value instanceof Promise) {
+        skipValue = await value;
+      } else {
+        skipValue = value;
+      }
+
+      if (skipValue === true || skipValue === false) {
+        return skipValue;
+      }
+
+      throw new Error(`The evaluation for 'skipValue' or its promise did not return a boolean value.`);
+    } else {
+      // Not used; do not skip the backup -> return false
+      return false;
+    }
+  };
+
   /**
    * 
    * @param {string} executable 
@@ -138,32 +160,38 @@ class Backup {
    * @returns {Promise.<void>}
    */
   run() {
-    return this._runTasksBefore().then(_ => {
-      let backupPromise = null;
-
-      if (this.options.mode === 'zip') {
-        backupPromise = Backup.runProcess(this.sevenZip, ['a'].concat(this.options.sevenZipArgs.concat([
-          this.destinationFileName, this.options.src]))).catch(err => {
-            fs.exists(this.destinationFileName, exists => {
-              fs.unlink(this.destinationFileName, _ => { });
-            });
-            throw err;
-          });
-      } else if (this.options.mode === 'copy') {
-        backupPromise = copy(this.options.src, this.destinationFileName, {
-          overwrite: true,
-          expand: true,
-          dot: true,
-          junk: true
-        });
-      } else if (this.options.mode === 'tasksOnly') {
-        backupPromise = Promise.resolve();
-      } else {
-        backupPromise = Promise.reject(`The mode "${this.options.mode}" is not supported.`);
+    return this._runSkipper().then(shallSkip => {
+      if (shallSkip) {
+        return Promise.resolve();
       }
-      
-      return backupPromise.then(_ => {
-        return this._runTasksAfter();
+
+      return this._runTasksBefore().then(_ => {
+        let backupPromise = null;
+  
+        if (this.options.mode === 'zip') {
+          backupPromise = Backup.runProcess(this.sevenZip, ['a'].concat(this.options.sevenZipArgs.concat([
+            this.destinationFileName, this.options.src]))).catch(err => {
+              fs.exists(this.destinationFileName, exists => {
+                fs.unlink(this.destinationFileName, _ => { });
+              });
+              throw err;
+            });
+        } else if (this.options.mode === 'copy') {
+          backupPromise = copy(this.options.src, this.destinationFileName, {
+            overwrite: true,
+            expand: true,
+            dot: true,
+            junk: true
+          });
+        } else if (this.options.mode === 'tasksOnly') {
+          backupPromise = Promise.resolve();
+        } else {
+          backupPromise = Promise.reject(`The mode "${this.options.mode}" is not supported.`);
+        }
+        
+        return backupPromise.then(_ => {
+          return this._runTasksAfter();
+        });
       });
     });
   };

@@ -15,7 +15,7 @@
 
 /**
  * @typedef InternalBackupTask
- * @type {'@emptyDest'|Function} If a function, then one function's result will be passed to the next function. A function should synchronously return a value or a Promise.<any>. If the latter, the promise is awaited and its resulting value is used. The whole job fails if any of the functions fails or their promise rejects.
+ * @type {'@emptyDest'|Function.<T|Promise.<T>>} If a function, then one function's result will be passed to the next function. A function should synchronously return a value or a Promise.<any>. If the latter, the promise is awaited and its resulting value is used. The whole job fails if any of the functions fails or their promise rejects.
  */
 
 /**
@@ -29,6 +29,7 @@
  * @property {number} intervalMinutes - amount of minutes in between backups
  * @property {number} intervalErrorMinutes - amount of minutes to wait if a backup failed before attempting it again
  * @property {Array.<string>} sevenZipArgs arguments to pass to 7z
+ * @property {Function.<boolean|Promise.<boolean>>} [skipBackup] (Optional) A function that determines whether the backup can or should be skipped. The function is evaluated every time the backup is triggered. It is evaluated before any other tasks are run (i.e. 'tasksBefore'). It should return true if the backup should be skipped. This function may return a value synchronously or a Promise that resolves to a boolean value. If a non-boolean value is returned or the Promise is rejected, the backup will be aborted.
  * @property {Array.<BackupTask|InternalBackupTask>} tasksBefore list of tasks to run before backup; built-in tasks start with @, like @emptyDest will wipe the destination folder
  * @property {Array.<BackupTask|InternalBackupTask>} tasksAfter list of tasks to run after backup
  */
