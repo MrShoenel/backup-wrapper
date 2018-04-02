@@ -4,9 +4,20 @@ const { assert, expect } = require('chai')
 
 
 describe('JobQueue', () => {
+  it('should throw if given invalid parameters', () => {
+    assert.throws(() => {
+      new Job('foo');
+    });
+    assert.throws(() => {
+      new JobQueue(0);
+    });
+    assert.throws(() => {
+      new JobQueue(-15);
+    });
+  });
+
   it('should behave as a 1-capacity serial fifo-queue if not used parallel', async function() {
-    this.timeout(15000);
-    const [returnPromise, done] = deferMocha();
+    this.timeout(600);
     let firstJobFinished = false, secondJobStarted = false;
 
     const q = new JobQueue(1);
@@ -33,11 +44,29 @@ describe('JobQueue', () => {
     await timeout(50);
     assert.isTrue(!firstJobFinished && !secondJobStarted,
       'The first Job should not be finished and the second must not have started');
-    
-    secondJob.donePromise.then(_ => {
-      done();
-    }).catch(done);
 
-    return returnPromise;
+    await secondJob.donePromise;
+  });
+
+  it('should be able to process jobs in parallel', async function() {
+    this.timeout(600);
+
+    const q = new JobQueue(2);
+    const j1 = new Job(() => new Promise((resolve, reject) => {
+      setTimeout(resolve, 250);
+    }));
+    const j2 = new Job(() => new Promise((resolve, reject) => {
+      setTimeout(resolve, 250);
+    }));
+
+    q.addJob(j1);
+    await timeout(50);
+    assert.isTrue(q.isWorking && !q.isBusy && !j1.isDone);
+    q.addJob(j2);
+    await timeout(50);
+    assert.isTrue(q.isWorking && q.isBusy);
+
+    await timeout(250);
+    assert.isTrue(!q.isWorking && j1.isDone && j2.isDone);
   });
 });
