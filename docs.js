@@ -26,6 +26,7 @@
  * @property {'zip'|'copy'|'tasksOnly'} mode - how this backup works (copy, zip or only custom tasks defined via tasksBefore or/and tasksAfter)
  * @property {string} src - absolute path to file or folder to backup
  * @property {string} dest - absolute path to folder to store backup in
+ * @property {Function.<number|Promise.<number>>} [cost] - only required if the queue type is cost.
  * @property {number} intervalMinutes - amount of minutes in between backups
  * @property {number} intervalErrorMinutes - amount of minutes to wait if a backup failed before attempting it again
  * @property {Array.<string>} sevenZipArgs arguments to pass to 7z
@@ -52,4 +53,12 @@
  * @property {string} method
  * @property {string} endpoint
  * @property {number} level
+ */
+
+
+/**
+ * @typedef Deferred
+ * @property {Promise} promise the underyling Promise
+ * @property {(any) => any} resolve the resolve function
+ * @property {(any) => any} reject the reject function
  */

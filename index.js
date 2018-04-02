@@ -5,6 +5,7 @@ const fs = require('fs')
 , historyFile = './history.json'
 , Backup = require('./Backup')
 , { Job, JobQueue} = require('./JobQueue')
+, { JobWithCost, JobQueueCapabilities } = require('./JobQueueCapabilities')
 , { LogLevel, BaseLogger, Transporter } = require('sh.log-client');
 
 
@@ -21,13 +22,14 @@ const saveHistory = () => {
   fs.writeFileSync(historyFile, JSON.stringify(history));
 };
 
-const queue = new JobQueue(conf.app.parallelJobs);
+const queue = conf.app.jobQueueType === 'parallel' ?
+  new JobQueue(conf.app.jobQueueProcessing) :
+  new JobQueueCapabilities(conf.app.jobQueueProcessing, conf.app.jobQueueAllowExclusive);
 
 const logTrans = new Transporter({ method: {
   type: conf.app.logging.method,
   endpoint: conf.app.logging.endpoint
 } });
-logTrans.transport({});
 
 
 conf.backups.forEach(backupOption => {
@@ -44,7 +46,7 @@ conf.backups.forEach(backupOption => {
       queue.addJob(() => {
         const startBackup = +new Date;
 
-        return backup.run().then(() => {
+        const jobPromiseFn = () => backup.run().then(() => {
           setTimeout(() => createJob(+new Date, backup.intervalMSecs), 0);
 
           const endBackup = +new Date;
@@ -53,17 +55,26 @@ conf.backups.forEach(backupOption => {
 
           history[backup.name] = { lastRun: endBackup, lastDuration: duration };
           saveHistory();
-          console.info(succMsg);
           logger.logInfo(succMsg);
         }).catch(err => {
           setTimeout(() => createJob(+new Date, backup.intervalErrorMSecs), 0);
 
           const errMsg = `Job ${backup.name} failed, restarting in ${Math.round(backup.intervalErrorMSecs / 1e3)} seconds.`;
 
-          console.error(err);
-          console.info(errMsg);
           logger.logError(errMsg, err);
         });
+
+        if (queue instanceof JobQueueCapabilities) {
+          if (!backup.options.hasOwnProperty('cost')
+            || isNaN(backup.options.cost)
+            || !Number.isFinite(backup.options.cost))
+          {
+            throw new Error(`The job "${backup.name}" does not define a cost.`);
+          }
+          return new JobWithCost(jobPromiseFn, backup.options.cost);
+        } else {
+          return new Job(jobPromiseFn);
+        }
       });
     };
 
