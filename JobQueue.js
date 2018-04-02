@@ -1,4 +1,73 @@
 
+
+/**
+ * @template T
+ */
+class Job {
+  /**
+   * @template T
+   * @param {() => Promise.<T>} promiseProducer 
+   */
+  constructor(promiseProducer) {
+    this._promiseProducer = promiseProducer;
+    this._isDone = false;
+    this._hasFailed = false;
+    /** @type {T} */
+    this._result = void 0;
+    this._deferred = defer();
+  };
+
+  get isDone() {
+    return this._isDone;
+  };
+
+  get hasFailed() {
+    return this._hasFailed;
+  };
+
+  /**
+   * A promise that can be used to await this Job's final state.
+   * If resolved, will resolve with this Job's result. The promise
+   * returned by run() should only be used by the queue.
+   * 
+   * @template T
+   * @returns {Promise.<T>}
+   */
+  get donePromise() {
+    return this._deferred.promise;
+  };
+
+  /**
+   * @template T
+   * @returns {T}
+   */
+  get result() {
+    if (!this.isDone) {
+      throw new Error(`This job is not yet done or has failed.`);
+    }
+    return this._result;
+  };
+
+  /**
+   * @template T
+   * @returns {Promise.<T>} the Promise that will resolve with the
+   * job's result.
+   */
+  async run() {
+    try {
+      this._result = await this._promiseProducer();
+      this._isDone = true;
+      this._hasFailed = false;
+      this._deferred.resolve(this.result);
+      return this.result;
+    } catch (e) {
+      this._isDone = false;
+      this._hasFailed = true;
+      this._deferred.reject(e);
+      throw e;
+    }
+  };
+};
 class JobQueue {
   constructor(numParallel = 1) {
     /** @type {Array.<() => Promise.<any>>} */
