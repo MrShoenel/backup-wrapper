@@ -2,6 +2,18 @@ require('../docs');
 
 
 /**
+ * A function that creates an awaitable timout.
+ * 
+ * @param {number} ms Milliseconds to wait before resolving
+ * @returns {Promise.<void>} a Promise that is resolved after
+ * the amount of milliseconds given.
+ */
+const timeout = ms => new Promise((resolve, reject) => {
+  setTimeout(resolve, ms);
+});
+
+
+/**
  * Creates a deferred Promise and returns an object with function
  * that can be used to resolve or reject the deferred.
  * 
@@ -49,6 +61,7 @@ const deferMocha = () => {
 };
 
 module.exports = Object.freeze({
+  timeout,
   defer,
   deferMocha
 });
