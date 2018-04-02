@@ -1,3 +1,4 @@
+const { defer } = require('./tools/Defer');
 
 
 /**
@@ -68,9 +69,18 @@ class Job {
     }
   };
 };
+
+
+
+
+/**
+ * A standard queue for jobs that can handle parallel jobs up to a
+ * specified degree of parallelism. This queue will run jobs whenever
+ * there is space on it (i.e. it cannot be paused/resumed).
+ */
 class JobQueue {
   constructor(numParallel = 1) {
-    /** @type {Array.<() => Promise.<any>>} */
+    /** @type {Array.<Job>} */
     this.queue = [];
     /** @type {Array.<Promise.<any>>} */
     this.currentJobs = [];
@@ -78,15 +88,31 @@ class JobQueue {
     this.numParallel = numParallel;
   };
 
+  /**
+   * @returns {boolean} true if there are any current jobs running.
+   */
+  get isWorking() {
+    return this.currentJobs.length > 0;
+  };
+
+  /**
+   * @returns {boolean} true iff the queue is busy and all of its slots
+   * are currently used actively by jobs (the number of active jobs is
+   * equal to maximum degree of parallelism).
+   */
   get isBusy() {
     return this.currentJobs.length === this.numParallel;
   };
 
   /**
-   * @param {() => Promise.<any>} job
+   * @param {() => Promise.<any>|Job} job
    * @returns {JobQueue} this
    */
   addJob(job) {
+    if (!(job instanceof Job)) {
+      job = new Job(job);
+    }
+
     this.queue.push(job);
     setTimeout(this._runNext.bind(this), 0);
     return this;
@@ -102,8 +128,8 @@ class JobQueue {
     }
     
     const nextJob = this.queue.shift();
-    const promise = nextJob();
-    if (!promise instanceof Promise) {
+    const promise = nextJob.run();
+    if (!(promise instanceof Promise)) {
       throw new Error('This job does not produce a promise!');
     }
 
@@ -115,7 +141,6 @@ class JobQueue {
 
     promise.then(val => {
       finalFunc();
-      return val;
     }).catch(err => {
       finalFunc();
       throw err;
@@ -123,4 +148,7 @@ class JobQueue {
   };
 };
 
-module.exports =  JobQueue;
+module.exports = Object.freeze({
+  Job,
+  JobQueue
+});
