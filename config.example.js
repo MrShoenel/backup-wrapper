@@ -29,8 +29,10 @@ const createConf = () => {
      */
     app: {
       sevenZip: "C:\\Program Files\\7-Zip\\7z.exe",
-      // How many backup jobs can be run in parallel:
-      parallelJobs: 2,
+
+      jobQueueType: 'cost',
+      jobQueueProcessing: 4,
+      jobQueueAllowExclusive: true,      
 
       logging: {
         method: 'http',

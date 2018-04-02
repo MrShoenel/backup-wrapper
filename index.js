@@ -4,7 +4,7 @@ const fs = require('fs')
 , cp = require('child_process')
 , historyFile = './history.json'
 , Backup = require('./Backup')
-, JobQueue = require('./JobQueue')
+, { Job, JobQueue} = require('./JobQueue')
 , { LogLevel, BaseLogger, Transporter } = require('sh.log-client');
 
 

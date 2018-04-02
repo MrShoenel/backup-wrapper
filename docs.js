@@ -37,7 +37,9 @@
 
 /**
  * @typedef AppConfig
- * @property {number} parallelJobs
+ * @property {'parallel'|'cost'} jobQueueType determines whether to use a queue that can process jobs with a strict degree of parallelism or based on the jobs' cost. If based on cost, each backup job needs to define its cost.
+ * @property {number} jobQueueProcessing for parallel queues, the amount of parallel jobs; for capability-based queues, this number represents the processing capability of the queue.
+ * @property {boolean} jobQueueAllowExclusive - only applies to 'cost'-based queues and specifies whether or not they may handle jobs that require the queue's whole capability or even exceed it. In that case, by definition, the job needs to run exclusively.
  * @property {string} sevenZip
  * @property {LogConfig} logging
  * 
