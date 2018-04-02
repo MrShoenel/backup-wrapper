@@ -3,9 +3,9 @@ require('./docs.js');
 const fs = require('fs')
 , cp = require('child_process')
 , historyFile = './history.json'
-, Backup = require('./Backup')
-, { Job, JobQueue} = require('./JobQueue')
-, { JobWithCost, JobQueueCapabilities } = require('./JobQueueCapabilities')
+, Backup = require('./lib/Backup')
+, { Job, JobQueue} = require('./lib/JobQueue')
+, { JobWithCost, JobQueueCapabilities } = require('./lib/JobQueueCapabilities')
 , { LogLevel, BaseLogger, Transporter } = require('sh.log-client');
 
 
