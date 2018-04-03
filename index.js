@@ -4,8 +4,8 @@ const fs = require('fs')
 , cp = require('child_process')
 , historyFile = './history.json'
 , Backup = require('./lib/Backup')
-, { Job, JobQueue} = require('./lib/JobQueue')
-, { JobWithCost, JobQueueCapabilities } = require('./lib/JobQueueCapabilities')
+, { Job, JobQueue,
+    JobWithCost, JobQueueCapabilities } = require('sh.orchestration-tools')
 , { LogLevel, BaseLogger, Transporter } = require('sh.log-client');
 
 
